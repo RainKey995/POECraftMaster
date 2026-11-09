@@ -1,0 +1,28 @@
+# .NET build and verification output
+[Bb]in/
+[Oo]bj/
+/artifacts/
+/packages/
+TestResults/
+
+# Visual Studio and per-user project settings
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# JetBrains Rider / ReSharper local settings and caches
+.idea/
+*.iml
+_ReSharper*/
+*.DotSettings.user
+
+# Local logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# OS-generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
