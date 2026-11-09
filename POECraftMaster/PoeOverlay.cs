@@ -4,6 +4,7 @@ using System.Numerics;
 using ImGuiNET;
 using ClickableTransparentOverlay;
 using POECraftMaster.Helper;
+using POECraftMaster.Crafting;
 
 namespace POECraftMaster;
 
@@ -11,17 +12,15 @@ public class PoeOverlay : Overlay
 {
     public const string TargetProcessName = "PathOfExile_x64";
 
-    private bool checkBoxValue = false;
-    private int loveMeter = 0;
-    private string input1 = string.Empty;
-    private string input2 = string.Empty;
+    private readonly CraftPanel _craftPanel = new();
+    private readonly CraftRunner _craftRunner = new();
+    private volatile bool _settingsOpen;
+    private bool _nativeSuppressed;
+    private long _nextProcessSearch;
 
     private Process? _targetProcess;
     private Process _selfProcess = null!;
 
-    // Direct3D 11 shader resource view; owned and released by Overlay.
-    private IntPtr _itemTexture;
-    private Vector2 _itemTextureSize;
     private volatile bool _overlayVisible = true;
     private bool _backdropVisible;
     private bool _blurAvailable;
@@ -29,7 +28,19 @@ public class PoeOverlay : Overlay
     private float _fadeProgress;
     private long _lastFrameTimestamp = Stopwatch.GetTimestamp();
 
-    public void ToggleVisibility() => _overlayVisible = !_overlayVisible;
+    public void ToggleVisibility()
+    {
+        if (_craftRunner.Progress.Running)
+        {
+            _craftRunner.Stop();
+            _overlayVisible = true;
+        }
+        else _overlayVisible = !_overlayVisible;
+    }
+
+    public CraftProgress CraftProgress => _craftRunner.Progress;
+    public void StopCrafting() => _craftRunner.Stop();
+    public void SetSettingsOpen(bool open) => _settingsOpen = open;
 
     public bool IsRender
     {
@@ -58,14 +69,17 @@ public class PoeOverlay : Overlay
     {
         ScreenHelper.HideFromTaskbar(window.Handle);
         _selfProcess = Process.GetCurrentProcess();
-        _targetProcess = Process.GetProcessesByName(TargetProcessName).FirstOrDefault();
+        RefreshTargetProcess();
 
         FPSLimit = 30;
         ConfigureChineseFont();
 
-        var imagePath = Path.Combine(AppContext.BaseDirectory, "Assets", "Sprites", "Grid.png");
-        AddOrGetImagePointer(imagePath, false, out _itemTexture, out var width, out var height);
-        _itemTextureSize = new Vector2(width, height);
+        _craftPanel.Initialize(relativePath =>
+        {
+            var imagePath = Path.Combine(AppContext.BaseDirectory, "Assets", relativePath);
+            AddOrGetImagePointer(imagePath, false, out var texture, out _, out _);
+            return texture;
+        });
 
         return Task.CompletedTask;
     }
@@ -90,12 +104,20 @@ public class PoeOverlay : Overlay
 
     protected override void Render()
     {
+        RefreshTargetProcess();
+        bool suppress = _craftRunner.Progress.Running || _settingsOpen;
+        if (_nativeSuppressed != suppress)
+        {
+            // A hidden native window cannot intercept the automated clicks or obscure Settings.
+            ScreenHelper.ShowWindow(window.Handle, suppress ? 0 : 8); // HIDE / SHOWNA
+            _nativeSuppressed = suppress;
+        }
         long now = Stopwatch.GetTimestamp();
         float elapsed = (float)Stopwatch.GetElapsedTime(_lastFrameTimestamp, now).TotalSeconds;
         _lastFrameTimestamp = now;
 
         // Never leave a fading overlay on the desktop or over a minimized game.
-        bool canRender = IsRender && Resize();
+        bool canRender = !suppress && IsRender && Resize();
         if (!canRender)
             _fadeProgress = 0f;
         else
@@ -124,26 +146,59 @@ public class PoeOverlay : Overlay
             | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse
             | (_overlayVisible ? ImGuiWindowFlags.None : ImGuiWindowFlags.NoInputs));
 
-        ImGui.Text("改造+增幅");
-        ImGui.Image(_itemTexture, _itemTextureSize, Vector2.Zero, Vector2.One,
-            new Vector4(1f, 1f, 1f, opacity), Vector4.Zero);
-        ImGui.SliderInt("hot much i appreciate this video", ref loveMeter, 1, 10);
-        ImGui.Checkbox("unlimited arm", ref checkBoxValue);
-        
-        ImGui.BeginChild("first child window", new Vector2(300, 200));
-        ImGui.Text("child window content");
-        ImGui.InputText("first input", ref input1, 16);
-        ImGui.EndChild();
-
-        ImGui.SameLine();
-
-        ImGui.BeginChild("second child window", new Vector2(300, 200));
-        ImGui.Text("child window content");
-        ImGui.InputText("second input", ref input2, 16);
-        ImGui.EndChild();
+        _craftPanel.Render(_craftRunner, StartCrafting);
 
         ImGui.End();
         ImGui.PopStyleVar(3);
+    }
+
+    private void RefreshTargetProcess()
+    {
+        if (_targetProcess != null && !_targetProcess.HasExited) return;
+        long now = Stopwatch.GetTimestamp();
+        if (now < _nextProcessSearch) return;
+        _nextProcessSearch = now + Stopwatch.Frequency;
+        _targetProcess?.Dispose();
+        _targetProcess = null;
+        foreach (var process in Process.GetProcessesByName(TargetProcessName))
+        {
+            if (_targetProcess == null && process.MainWindowHandle != IntPtr.Zero) _targetProcess = process;
+            else process.Dispose();
+        }
+    }
+
+    private void StartCrafting(CraftOptions options)
+    {
+        if (_targetProcess == null || _targetProcess.HasExited)
+            throw new InvalidOperationException("游戏尚未运行。");
+        IntPtr handle = _targetProcess.MainWindowHandle;
+        if (!GameAutomation.TryGetBounds(handle, out var bounds))
+            throw new InvalidOperationException("无法读取游戏客户区。");
+        BackdropHelper.SetBlur(window.Handle, false);
+        _backdropVisible = false;
+        ScreenHelper.ShowWindow(window.Handle, 0);
+        _nativeSuppressed = true;
+        if (!ScreenHelper.SetForegroundWindow(handle))
+            throw new InvalidOperationException("无法激活游戏窗口，请切回游戏后重试。");
+        _craftRunner.Start(options, handle, bounds);
+    }
+
+    public override void Close()
+    {
+        _craftRunner.Stop();
+        base.Close();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) _craftRunner.Stop();
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            _craftRunner.Dispose();
+            _targetProcess?.Dispose();
+            _selfProcess?.Dispose();
+        }
     }
 
     public bool Resize()

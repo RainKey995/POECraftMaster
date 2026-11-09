@@ -13,6 +13,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly Task _overlayTask;
     private SettingsForm? _settingsForm;
     private readonly OverlayHotkey _hotkey;
+    private readonly ToolStripMenuItem _stopCrafting;
 
     public TrayApplicationContext(PoeOverlay overlay)
     {
@@ -26,6 +27,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _icon = new Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "poe.ico"));
         _menu = new ContextMenuStrip();
         _menu.Items.Add("设置", null, (_, _) => ShowSettings());
+        _stopCrafting = new ToolStripMenuItem("停止制作", null, (_, _) => _overlay.StopCrafting());
+        _stopCrafting.Enabled = false;
+        _menu.Items.Add(_stopCrafting);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("退出", null, (_, _) => ExitThread());
         _trayIcon = new NotifyIcon
@@ -43,9 +47,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void ShowSettings()
     {
+        _overlay.StopCrafting();
+        _overlay.SetSettingsOpen(true);
         if (_settingsForm == null || _settingsForm.IsDisposed)
         {
             _settingsForm = new SettingsForm(_hotkey) { Icon = _icon };
+            _settingsForm.FormClosed += (_, _) => _overlay.SetSettingsOpen(false);
             _settingsForm.Show();
         }
 
@@ -56,6 +63,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void CheckOverlay(object? sender, EventArgs e)
     {
+        var progress = _overlay.CraftProgress;
+        _stopCrafting.Enabled = progress.Running;
+        _trayIcon.Text = progress.Running
+            ? $"POECraftMaster 制作中 {progress.Completed}/{progress.Total}，{progress.Attempts} 轮"
+            : "POECraftMaster";
         if (!_overlayTask.IsCompleted)
             return;
         try
