@@ -52,6 +52,9 @@ public sealed class CraftRunner : IDisposable
         int[] slots = options.SelectedSlots.Distinct().Order().ToArray();
         string[] rules = AffixMatcher.Rules(options.Affixes);
         int completed = 0, attempts = 0;
+        var rejectedSlots = new List<int>();
+        // Publish fresh snapshots so cancellation/error handlers retain all detected rejections.
+        void Publish(CraftProgress progress) => report(progress with { RejectedSlots = rejectedSlots.ToArray() });
         string lastText = "";
         game.Wait(1000, token);
         foreach (int slot in slots)
@@ -62,6 +65,13 @@ public sealed class CraftRunner : IDisposable
             for (int attempt = 0; ; attempt++)
             {
                 token.ThrowIfCancellationRequested();
+                if (options.Mode == CraftMode.Alteration && !ItemRarity.IsMagic(text))
+                {
+                    rejectedSlots.Add(slot);
+                    Publish(new(true, $"格子 {slot + 1} 不是魔法物品，已跳过", completed,
+                        slots.Length, attempts, slot, text));
+                    break;
+                }
                 if (options.Mode == CraftMode.Alteration && AffixMatcher.Count(text, rules) >= options.RequiredMatches)
                     break;
                 if (options.Mode == CraftMode.ScouringAndChance && attempt >= options.MaxAttempts) break;
@@ -75,7 +85,7 @@ public sealed class CraftRunner : IDisposable
                     if (rarity.Contains("Unique", StringComparison.OrdinalIgnoreCase)
                         || rarity.Contains("传奇", StringComparison.Ordinal) || rarity.Contains("傳奇", StringComparison.Ordinal)) break;
                 }
-                report(new(true, "制作中；F12 或托盘菜单停止", completed, slots.Length, attempts, slot, text));
+                Publish(new(true, "制作中；F12 或托盘菜单停止", completed, slots.Length, attempts, slot, text));
                 game.UseCurrency(options.Mode == CraftMode.Alteration ? options.Alteration : options.Scouring,
                     point, options.IntervalMs, token);
                 if (options.Mode == CraftMode.ScouringAndChance || options.UseAugmentation)
@@ -83,13 +93,15 @@ public sealed class CraftRunner : IDisposable
                         point, options.IntervalMs, token);
                 attempts++;
                 text = game.ReadItem(point, token);
-                report(new(true, "已读取装备信息", completed, slots.Length, attempts, slot, text));
+                Publish(new(true, "已读取装备信息", completed, slots.Length, attempts, slot, text));
             }
             completed++;
             lastText = text;
-            report(new(true, "当前物品已完成", completed, slots.Length, attempts, slot, text));
+            Publish(new(true, rejectedSlots.Contains(slot) ? "非魔法物品已跳过" : "当前物品已完成",
+                completed, slots.Length, attempts, slot, text));
         }
-        report(new(false, "全部任务已完成", completed, slots.Length, attempts, ItemText: lastText));
+        Publish(new(false, $"全部任务已完成，跳过 {rejectedSlots.Count} 个非魔法格子",
+            completed, slots.Length, attempts, ItemText: lastText));
     }
 
     public void Stop()

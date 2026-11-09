@@ -55,6 +55,9 @@ internal sealed class CraftPanel
 
     private void DrawEditor(CraftRunner runner, Action<CraftOptions> start)
     {
+        var progress = runner.Progress;
+        var rejectedSlots = !progress.Running && _mode == CraftMode.Alteration
+            ? progress.RejectedSlots : [];
         bool columns = ImGui.GetContentRegionAvail().X >= 900;
         bool table = ImGui.BeginTable("craft layout", columns ? 2 : 1, ImGuiTableFlags.Resizable);
         if (!table) return;
@@ -93,7 +96,17 @@ internal sealed class CraftPanel
                 ImGui.GetWindowDrawList().AddImage(_slots[slot] ? _selectedGrid : _grid,
                     position, position + new Vector2(cell), Vector2.Zero, Vector2.One,
                     ImGui.GetColorU32(new Vector4(1, 1, 1, 1)));
-                if (ImGui.IsItemHovered()) ImGui.SetTooltip($"第 {column + 1} 列，第 {row + 1} 行（编号 {slot + 1}）");
+                bool rejected = rejectedSlots.Contains(slot);
+                if (rejected)
+                {
+                    ImGui.GetWindowDrawList().AddRectFilled(position, position + new Vector2(cell),
+                        ImGui.GetColorU32(new Vector4(1f, 0.05f, 0.05f, 0.4f)));
+                    ImGui.GetWindowDrawList().AddRect(position + Vector2.One,
+                        position + new Vector2(cell - 1), ImGui.GetColorU32(new Vector4(1f, 0.15f, 0.15f, 1f)),
+                        0f, ImDrawFlags.None, 2f);
+                }
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip($"第 {column + 1} 列，第 {row + 1} 行（编号 {slot + 1}）"
+                    + (rejected ? "\n稀有度不是魔法，已跳过制作。" : ""));
             }
         }
         ImGui.PopStyleVar();
@@ -102,6 +115,9 @@ internal sealed class CraftPanel
         if (ImGui.Button("清空")) Array.Fill(_slots, false);
         ImGui.SameLine();
         ImGui.Text($"已选 {_slots.Count(selected => selected)} 格");
+        if (rejectedSlots.Length > 0)
+            ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f),
+                $"红色格子：非魔法物品，已跳过 {rejectedSlots.Length} 格。重新开始任务后重新检测。");
         ImGui.Separator();
         ImGui.TextWrapped("开始前请打开游戏背包和通货仓库，并核对坐标。执行时界面暂时隐藏；F12、托盘“停止制作”或显示快捷键可停止。切出游戏也会停止。");
         if (ImGui.Button("开始制作"))
@@ -174,7 +190,6 @@ internal sealed class CraftPanel
             };
             if (ImGui.Button("恢复默认坐标")) _coordinates = new CraftOptions();
         }
-        var progress = runner.Progress;
         ImGui.Separator();
         ImGui.TextWrapped(progress.Message);
         ImGui.Text($"完成 {progress.Completed}/{progress.Total}，已执行 {progress.Attempts} 轮");

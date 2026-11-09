@@ -66,5 +66,27 @@ public static class AffixMatcher
     }
 }
 
+public static class ItemRarity
+{
+    public static bool IsMagic(string text)
+    {
+        foreach (string line in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            string header = string.Concat(line.Where(character => !char.IsWhiteSpace(character)))
+                .Replace('：', ':');
+            int separator = header.IndexOf(':');
+            if (separator < 0) continue;
+            string name = header[..separator];
+            if (name != "稀有度" && !name.Equals("Rarity", StringComparison.OrdinalIgnoreCase)) continue;
+            string value = header[(separator + 1)..];
+            return value == "魔法" || value.Equals("Magic", StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    }
+}
+
 public sealed record CraftProgress(bool Running = false, string Message = "就绪", int Completed = 0,
-    int Total = 0, int Attempts = 0, int Slot = -1, string ItemText = "");
+    int Total = 0, int Attempts = 0, int Slot = -1, string ItemText = "")
+{
+    public int[] RejectedSlots { get; init; } = [];
+}
