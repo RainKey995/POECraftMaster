@@ -18,6 +18,7 @@ internal sealed class CraftPanel
     private int _matches = 1, _interval = 100, _attempts = 1000;
     private bool _augmentation;
     private CraftOptions _coordinates = new();
+    private string _coordinatePath = CoordinateConfigFile.DefaultPath;
     private IntPtr _grid, _selectedGrid, _alterationIcon, _augmentationIcon;
 
     public void Initialize(Func<string, IntPtr> loadImage)
@@ -27,6 +28,13 @@ internal sealed class CraftPanel
         _alterationIcon = loadImage("Currency/currencyrerollmagic.png");
         _augmentationIcon = loadImage("Currency/currencyaddmodtomagic.png");
         _message = _store.Status;
+        RunUiAction(() =>
+        {
+            if (File.Exists(CoordinateConfigFile.DefaultPath))
+                _coordinates = CoordinateConfigFile.Load(CoordinateConfigFile.DefaultPath).ApplyTo(_coordinates);
+            else
+                CoordinateConfigFile.Save(CoordinateConfigFile.DefaultPath, CoordinateConfig.FromOptions(_coordinates));
+        });
     }
 
     public void Render(CraftRunner runner, Action<CraftOptions> start)
@@ -189,6 +197,27 @@ internal sealed class CraftPanel
                 InventoryStep = EditPoint("背包步长", _coordinates.InventoryStep)
             };
             if (ImGui.Button("恢复默认坐标")) _coordinates = new CraftOptions();
+            ImGui.TextWrapped("JSON 使用 0～100 的百分比。保存或导入后，重启应用会恢复该坐标配置。应用词缀方案不会改变坐标。");
+            ImGui.InputText("坐标 JSON 路径", ref _coordinatePath, 2048);
+            if (ImGui.Button("保存坐标 JSON")) RunUiAction(() =>
+            {
+                var config = CoordinateConfig.FromOptions(_coordinates);
+                CoordinateConfigFile.Save(_coordinatePath, config);
+                if (!IsDefaultCoordinatePath()) CoordinateConfigFile.Save(CoordinateConfigFile.DefaultPath, config);
+                _message = $"坐标已保存：{Path.GetFullPath(_coordinatePath)}";
+            });
+            ImGui.SameLine();
+            if (ImGui.Button("导入坐标 JSON")) RunUiAction(() =>
+            {
+                // Parse and validate everything before replacing the live calibration.
+                var config = CoordinateConfigFile.Load(_coordinatePath);
+                var updated = config.ApplyTo(_coordinates);
+                if (!IsDefaultCoordinatePath()) CoordinateConfigFile.Save(CoordinateConfigFile.DefaultPath, config);
+                _coordinates = updated;
+                _message = "坐标 JSON 已导入并生效，下次启动自动恢复。";
+            });
+            if (ImGui.Button("使用默认配置路径")) _coordinatePath = CoordinateConfigFile.DefaultPath;
+            ImGui.TextWrapped($"启动配置：{CoordinateConfigFile.DefaultPath}");
         }
         ImGui.Separator();
         ImGui.TextWrapped(progress.Message);
@@ -218,7 +247,6 @@ internal sealed class CraftPanel
     {
         if (!_store.Profiles.TryGetValue(_selectedProfile, out var options))
             throw new ArgumentException("请先选择方案。");
-        _coordinates = options;
         _affixes = options.Affixes ?? "";
         _matches = options.RequiredMatches;
         _interval = options.IntervalMs;
@@ -234,7 +262,11 @@ internal sealed class CraftPanel
     {
         try { action(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException
-            or InvalidOperationException or System.Xml.XmlException)
+            or InvalidOperationException or System.Xml.XmlException or System.Text.Json.JsonException
+            or NotSupportedException)
         { _message = e.Message; }
     }
+
+    private bool IsDefaultCoordinatePath() => string.Equals(Path.GetFullPath(_coordinatePath),
+        Path.GetFullPath(CoordinateConfigFile.DefaultPath), StringComparison.OrdinalIgnoreCase);
 }

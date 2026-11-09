@@ -32,6 +32,18 @@
 
 ## 验证
 
+### 独立坐标 JSON
+
+全部六组校准坐标（改造、增幅、重铸、机会、背包起点、背包步长）现在由独立 JSON 管理，示例见 `examples/coordinates.json`。
+
+- `schemaVersion`：当前为 `1`。以后变更格式时在 `CoordinateConfig` / `CoordinateConfigFile` 中集中处理。
+- `units`：固定为 `percent`，`x` / `y` 是 0～100 百分比，与校准界面相同。
+- `inventoryOrigin`：背包左上格中心；`inventoryStep`：相邻列/行的中心距离。
+- 启动时自动加载 `%LOCALAPPDATA%/POECraftMaster/coordinates.json`；首次没有文件时创建默认配置。
+- 在校准区域输入文件完整路径，点击“保存坐标 JSON”导出，或“导入坐标 JSON”加载。自定义路径的保存/导入也会更新启动配置，导入失败保留当前坐标。
+- 支持 JSON 注释和尾随逗号；缺失字段、空坐标、不支持的版本、错误单位及背包越界会被拒绝。
+- 应用词缀方案不再覆盖坐标。旧方案文件中的坐标字段仅保留兼容，新坐标以独立配置为准。恢复默认坐标后需保存，才能在重启后保留。
+
 ```text
 dotnet build POECraftMaster/POECraftMaster.csproj
 dotnet run --project tests/CraftMigrationChecks/CraftMigrationChecks.csproj

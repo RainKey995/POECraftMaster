@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "units": "percent",
+  "alteration": { "x": 5.859375, "y": 28.842592 },
+  "augmentation": { "x": 11.7187, "y": 34.25925 },
+  "scouring": { "x": 22.70833, "y": 51.0648 },
+  "chance": { "x": 11.6927, "y": 28.9351 },
+  "inventoryOrigin": { "x": 67.6041667, "y": 56.8518519 },
+  "inventoryStep": { "x": 2.734375, "y": 4.8611111 }
+}
