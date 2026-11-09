@@ -26,3 +26,6 @@ _ReSharper*/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Test Project
+tests/
