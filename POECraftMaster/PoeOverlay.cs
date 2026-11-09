@@ -23,6 +23,8 @@ public class PoeOverlay : Overlay
     private IntPtr _itemTexture;
     private Vector2 _itemTextureSize;
     private volatile bool _overlayVisible = true;
+    private bool _backdropVisible;
+    private bool _blurAvailable;
 
     public void ToggleVisibility() => _overlayVisible = !_overlayVisible;
 
@@ -85,14 +87,21 @@ public class PoeOverlay : Overlay
 
     protected override void Render()
     {
-        if (!_overlayVisible || !IsRender)
-            return;
-
-        if (!Resize())
+        bool visible = _overlayVisible && IsRender && Resize();
+        if (_backdropVisible != visible)
+        {
+            // Run after Overlay's transparency initialization, on the render thread.
+            _blurAvailable = BackdropHelper.SetBlur(window.Handle, visible);
+            _backdropVisible = visible;
+        }
+        if (!visible)
             return;
 
         ImGui.SetNextWindowPos(Vector2.Zero, ImGuiCond.Always);
         ImGui.SetNextWindowSize(new Vector2(Size.Width, Size.Height), ImGuiCond.Always);
+        ImGui.SetNextWindowBgAlpha(_blurAvailable ? 0.22f : 0.65f);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0f);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f);
         ImGui.Begin("Main Window", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar
             | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse);
 
@@ -114,6 +123,7 @@ public class PoeOverlay : Overlay
         ImGui.EndChild();
 
         ImGui.End();
+        ImGui.PopStyleVar(2);
     }
 
     public bool Resize()
