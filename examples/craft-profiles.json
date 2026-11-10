@@ -1,0 +1,20 @@
+{
+  "戒指制作示例": {
+    "mode": "Alteration",
+    "affixes": "目标词缀一\n目标词缀二",
+    "requiredMatches": 1,
+    "intervalMs": 100,
+    "useAugmentation": true,
+    "maxAttempts": 1000,
+    "selectedSlots": [0]
+  },
+  "重铸机会示例": {
+    "mode": "ScouringAndChance",
+    "affixes": "",
+    "requiredMatches": 1,
+    "intervalMs": 100,
+    "useAugmentation": false,
+    "maxAttempts": 1000,
+    "selectedSlots": [5]
+  }
+}

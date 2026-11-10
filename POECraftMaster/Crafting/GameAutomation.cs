@@ -9,6 +9,7 @@ namespace POECraftMaster.Crafting;
 
 public interface IGameAutomation
 {
+    void SelectCurrencyStash(CancellationToken token) { }
     void Wait(int milliseconds, CancellationToken token);
     void UseCurrency(RelativePoint currency, RelativePoint item, int interval, CancellationToken token);
     string ReadItem(RelativePoint item, CancellationToken token);
@@ -16,6 +17,25 @@ public interface IGameAutomation
 
 internal sealed class GameAutomation(IntPtr gameWindow, Rectangle bounds) : IGameAutomation
 {
+    private Rectangle _stashBounds;
+
+    public void SelectCurrencyStash(CancellationToken token)
+    {
+        Check(token);
+        using (var selection = new CurrencyStashSelectionForm(bounds, token,
+            () => TryGetBounds(gameWindow, out var current) && current == bounds))
+        {
+            if (selection.ShowDialog() != DialogResult.OK)
+                throw new OperationCanceledException("已取消仓库区域选择。", token);
+            token.ThrowIfCancellationRequested();
+            _stashBounds = selection.Selection;
+        }
+        CurrencyStashRegion.Validate(_stashBounds, bounds.Size);
+        if (!ScreenHelper.SetForegroundWindow(gameWindow))
+            throw new OperationCanceledException("无法激活游戏窗口，已停止。", token);
+        Wait(300, token);
+    }
+
     private void Check(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -50,17 +70,21 @@ internal sealed class GameAutomation(IntPtr gameWindow, Rectangle bounds) : IGam
         Check(token);
     }
 
-    private void Move(RelativePoint position, CancellationToken token)
+    private void Move(RelativePoint position, CancellationToken token, Rectangle? coordinateBounds = null)
     {
         Check(token);
-        Point point = position.ToScreen(bounds);
+        Point point = position.ToScreen(coordinateBounds ?? bounds);
         if (!SetCursorPos(point.X, point.Y)) throw new Win32Exception(Marshal.GetLastWin32Error());
         Wait(80, token);
     }
 
     public void UseCurrency(RelativePoint currency, RelativePoint item, int interval, CancellationToken token)
     {
-        Move(currency, token);
+        Check(token);
+        CurrencyStashRegion.Validate(_stashBounds, bounds.Size);
+        var screenStash = _stashBounds;
+        screenStash.Offset(bounds.Location);
+        Move(currency, token, screenStash);
         Click(true, token);
         Wait(interval, token);
         Move(item, token);

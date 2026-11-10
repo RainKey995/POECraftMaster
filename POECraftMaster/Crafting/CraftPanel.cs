@@ -12,13 +12,11 @@ internal sealed class CraftPanel
     private string _filter = "";
     private string _selectedProfile = "";
     private string _message = "";
-    private string _legacyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        "AppData", "LocalLow", "PoeHelper", "affixConfig.xml");
+    private string _profilePath = CraftProfileStore.DefaultPath;
     private CraftMode _mode;
     private int _matches = 1, _interval = 100, _attempts = 1000;
     private bool _augmentation;
-    private CraftOptions _coordinates = new();
-    private string _coordinatePath = CoordinateConfigFile.DefaultPath;
+    private CraftOptions? _coordinates;
     private IntPtr _grid, _selectedGrid, _alterationIcon, _augmentationIcon;
 
     public void Initialize(Func<string, IntPtr> loadImage)
@@ -30,10 +28,7 @@ internal sealed class CraftPanel
         _message = _store.Status;
         RunUiAction(() =>
         {
-            if (File.Exists(CoordinateConfigFile.DefaultPath))
-                _coordinates = CoordinateConfigFile.Load(CoordinateConfigFile.DefaultPath).ApplyTo(_coordinates);
-            else
-                CoordinateConfigFile.Save(CoordinateConfigFile.DefaultPath, CoordinateConfig.FromOptions(_coordinates));
+            _coordinates = CoordinateConfigFile.Load(CoordinateConfigFile.DefaultPath).ApplyTo(new CraftOptions());
         });
     }
 
@@ -127,7 +122,7 @@ internal sealed class CraftPanel
             ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f),
                 $"红色格子：非魔法物品，已跳过 {rejectedSlots.Length} 格。重新开始任务后重新检测。");
         ImGui.Separator();
-        ImGui.TextWrapped("开始前请打开游戏背包和通货仓库，并核对坐标。执行时界面暂时隐藏；F12、托盘“停止制作”或显示快捷键可停止。切出游戏也会停止。");
+        ImGui.TextWrapped("开始前请打开游戏背包和通货仓库。每次开始后，按住鼠标左键拖动框选完整仓库区域，松开后制作；Esc / F12 / 右键取消选择。制作中请勿移动仓库。F12、托盘“停止制作”或显示快捷键可停止；切出游戏也会停止。");
         if (ImGui.Button("开始制作"))
         {
             RunUiAction(() =>
@@ -171,53 +166,33 @@ internal sealed class CraftPanel
         ImGui.InputText("方案名称", ref _name, 256);
         if (ImGui.Button("保存当前方案")) RunUiAction(() =>
         {
-            _store.Save(_name, Options());
+            _store.Save(_name, WithEditor(new CraftOptions()));
             _selectedProfile = _name.Trim();
             _message = "方案已保存（同名方案更新）。";
         });
-        if (ImGui.CollapsingHeader("导入 POEHelper 词缀配置"))
+        if (ImGui.CollapsingHeader("词缀 JSON 配置"))
         {
-            ImGui.InputText("XML 路径", ref _legacyPath, 1024);
-            if (ImGui.Button("导入旧版 XML")) RunUiAction(() =>
+            ImGui.TextWrapped($"本项目配置：{_store.FilePath}");
+            ImGui.InputText("JSON 路径", ref _profilePath, 2048);
+            if (ImGui.Button("导入词缀 JSON")) RunUiAction(() =>
             {
-                _store.ImportLegacy(_legacyPath);
+                _store.ImportJson(_profilePath);
                 _message = _store.Status;
             });
-        }
-        if (ImGui.CollapsingHeader("坐标校准（游戏客户区百分比）"))
-        {
-            ImGui.TextWrapped("沿用旧项目默认布局。不同分辨率、UI 比例或仓库布局请修改坐标；背包起点是左上格中心，步长是相邻格中心距离。");
-            _coordinates = _coordinates with
-            {
-                Alteration = EditPoint("改造石", _coordinates.Alteration),
-                Augmentation = EditPoint("增幅石", _coordinates.Augmentation),
-                Scouring = EditPoint("重铸石", _coordinates.Scouring),
-                Chance = EditPoint("机会石", _coordinates.Chance),
-                InventoryOrigin = EditPoint("背包起点", _coordinates.InventoryOrigin),
-                InventoryStep = EditPoint("背包步长", _coordinates.InventoryStep)
-            };
-            if (ImGui.Button("恢复默认坐标")) _coordinates = new CraftOptions();
-            ImGui.TextWrapped("JSON 使用 0～100 的百分比。保存或导入后，重启应用会恢复该坐标配置。应用词缀方案不会改变坐标。");
-            ImGui.InputText("坐标 JSON 路径", ref _coordinatePath, 2048);
-            if (ImGui.Button("保存坐标 JSON")) RunUiAction(() =>
-            {
-                var config = CoordinateConfig.FromOptions(_coordinates);
-                CoordinateConfigFile.Save(_coordinatePath, config);
-                if (!IsDefaultCoordinatePath()) CoordinateConfigFile.Save(CoordinateConfigFile.DefaultPath, config);
-                _message = $"坐标已保存：{Path.GetFullPath(_coordinatePath)}";
-            });
             ImGui.SameLine();
-            if (ImGui.Button("导入坐标 JSON")) RunUiAction(() =>
+            if (ImGui.Button("导出词缀 JSON")) RunUiAction(() =>
             {
-                // Parse and validate everything before replacing the live calibration.
-                var config = CoordinateConfigFile.Load(_coordinatePath);
-                var updated = config.ApplyTo(_coordinates);
-                if (!IsDefaultCoordinatePath()) CoordinateConfigFile.Save(CoordinateConfigFile.DefaultPath, config);
-                _coordinates = updated;
-                _message = "坐标 JSON 已导入并生效，下次启动自动恢复。";
+                _store.ExportJson(_profilePath);
+                _message = _store.Status;
             });
-            if (ImGui.Button("使用默认配置路径")) _coordinatePath = CoordinateConfigFile.DefaultPath;
-            ImGui.TextWrapped($"启动配置：{CoordinateConfigFile.DefaultPath}");
+            ImGui.TextWrapped("同名导入保留当前方案；保存当前方案可更新同名方案。坐标由独立配置管理。");
+        }
+        if (ImGui.CollapsingHeader("坐标配置（百分比）"))
+        {
+            ImGui.TextWrapped($"配置文件：{CoordinateConfigFile.DefaultPath}");
+            ImGui.TextWrapped("坐标仅从配置文件读取。修改 JSON 后请重启应用，坐标单位为 0～100 的百分比。");
+            ImGui.TextWrapped("通货坐标相对于本次拖动框选的仓库区域；背包起点和步长相对于整个游戏客户区。");
+            ImGui.TextWrapped(_coordinates == null ? "坐标配置加载失败，无法开始制作。请检查配置文件后重启应用。" : "坐标配置已加载。");
         }
         ImGui.Separator();
         ImGui.TextWrapped(progress.Message);
@@ -229,17 +204,17 @@ internal sealed class CraftPanel
         ImGui.EndTable();
     }
 
-    private static RelativePoint EditPoint(string label, RelativePoint point)
-    {
-        var value = new Vector2(point.X * 100, point.Y * 100);
-        ImGui.InputFloat2(label + " (%)", ref value, "%.3f");
-        return new RelativePoint(value.X / 100, value.Y / 100);
-    }
+    private CraftOptions Options() => WithEditor(_coordinates
+        ?? throw new InvalidOperationException("坐标配置未加载，请检查 coordinates.json 后重启应用。"));
 
-    private CraftOptions Options() => _coordinates with
+    private CraftOptions WithEditor(CraftOptions options) => options with
     {
-        Mode = _mode, Affixes = _affixes, RequiredMatches = _matches, IntervalMs = _interval,
-        MaxAttempts = _attempts, UseAugmentation = _augmentation,
+        Mode = _mode,
+        Affixes = _affixes,
+        RequiredMatches = _matches,
+        IntervalMs = _interval,
+        MaxAttempts = _attempts,
+        UseAugmentation = _augmentation,
         SelectedSlots = Enumerable.Range(0, 60).Where(slot => _slots[slot]).ToArray()
     };
 
@@ -262,11 +237,9 @@ internal sealed class CraftPanel
     {
         try { action(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException
-            or InvalidOperationException or System.Xml.XmlException or System.Text.Json.JsonException
+            or InvalidOperationException or System.Text.Json.JsonException
             or NotSupportedException)
         { _message = e.Message; }
     }
 
-    private bool IsDefaultCoordinatePath() => string.Equals(Path.GetFullPath(_coordinatePath),
-        Path.GetFullPath(CoordinateConfigFile.DefaultPath), StringComparison.OrdinalIgnoreCase);
 }

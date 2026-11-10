@@ -75,6 +75,26 @@ internal sealed class OverlayHotkey : NativeWindow, IDisposable
         return true;
     }
 
+    public void SetCaptureMode(bool capturing)
+    {
+        if (capturing)
+        {
+            if (_registeredId != 0)
+                UnregisterHotKey(Handle, _registeredId);
+            _registeredId = 0;
+        }
+        else if (_registeredId == 0)
+        {
+            if (TryRegister(Settings, 1, out var error))
+            {
+                _registeredId = 1;
+                Status = "";
+            }
+            else
+                Status = error;
+        }
+    }
+
     private bool TryRegister(HotkeySettings settings, int id, out string error)
     {
         if (!AvailableKeys.Contains(settings.Key))

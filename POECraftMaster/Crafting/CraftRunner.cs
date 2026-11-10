@@ -30,14 +30,18 @@ public sealed class CraftRunner : IDisposable
                 }
                 catch (OperationCanceledException e)
                 {
-                    Volatile.Write(ref _progress, Progress with { Running = false,
-                        Message = token.IsCancellationRequested ? "任务已停止" : e.Message });
+                    Volatile.Write(ref _progress, Progress with
+                    {
+                        Running = false,
+                        Message = token.IsCancellationRequested ? "任务已停止" : e.Message
+                    });
                 }
                 catch (Exception e)
                 {
                     Volatile.Write(ref _progress, Progress with { Running = false, Message = $"已停止：{e.Message}" });
                 }
-            }) { IsBackground = true, Name = "POE crafting" };
+            })
+            { IsBackground = true, Name = "POE crafting" };
             // Clipboard access must run on an STA thread, independent of ImGui's render thread.
             _thread.SetApartmentState(ApartmentState.STA);
             _thread.Start();
@@ -57,6 +61,8 @@ public sealed class CraftRunner : IDisposable
         void Publish(CraftProgress progress) => report(progress with { RejectedSlots = rejectedSlots.ToArray() });
         string lastText = "";
         game.Wait(1000, token);
+        Publish(new(true, "请拖动框选通货仓库区域；Esc / F12 取消", Total: slots.Length));
+        game.SelectCurrencyStash(token);
         foreach (int slot in slots)
         {
             RelativePoint point = options.SlotPoint(slot);
@@ -86,10 +92,10 @@ public sealed class CraftRunner : IDisposable
                         || rarity.Contains("传奇", StringComparison.Ordinal) || rarity.Contains("傳奇", StringComparison.Ordinal)) break;
                 }
                 Publish(new(true, "制作中；F12 或托盘菜单停止", completed, slots.Length, attempts, slot, text));
-                game.UseCurrency(options.Mode == CraftMode.Alteration ? options.Alteration : options.Scouring,
+                game.UseCurrency(options.Mode == CraftMode.Alteration ? options.OrbofAlteration : options.OrbofScouring,
                     point, options.IntervalMs, token);
                 if (options.Mode == CraftMode.ScouringAndChance || options.UseAugmentation)
-                    game.UseCurrency(options.Mode == CraftMode.Alteration ? options.Augmentation : options.Chance,
+                    game.UseCurrency(options.Mode == CraftMode.Alteration ? options.OrbofAugmentation : options.OrbofChance,
                         point, options.IntervalMs, token);
                 attempts++;
                 text = game.ReadItem(point, token);
