@@ -1,11 +1,13 @@
 using System.Numerics;
 using ImGuiNET;
+using POECraftMaster.Tools;
 
 namespace POECraftMaster.Crafting;
 
 internal sealed class CraftPanel
 {
     private readonly CraftProfileStore _store = new();
+    private readonly CalculatorPanel _calculator = new();
     private readonly bool[] _slots = new bool[60];
     private string _affixes = "";
     private string _name = "";
@@ -36,7 +38,7 @@ internal sealed class CraftPanel
     {
         ImGui.Text("POE Craft Master");
         ImGui.SameLine();
-        ImGui.TextDisabled("制作工具");
+        ImGui.TextDisabled("功能栏");
         ImGui.Separator();
         if (ImGui.BeginTabBar("craft modes"))
         {
@@ -50,6 +52,11 @@ internal sealed class CraftPanel
             {
                 _mode = CraftMode.ScouringAndChance;
                 DrawEditor(runner, start);
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("计算器"))
+            {
+                _calculator.Render();
                 ImGui.EndTabItem();
             }
             ImGui.EndTabBar();
