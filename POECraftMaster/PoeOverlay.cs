@@ -19,7 +19,9 @@ public class PoeOverlay : Overlay
     private long _nextProcessSearch;
 
     private Process? _targetProcess;
-    private Process _selfProcess = null!;
+    private IntPtr _targetWindowHandle;
+    private int _targetProcessId;
+    private bool _overlayHasFocus;
 
     private volatile bool _overlayVisible = true;
     private bool _backdropVisible;
@@ -46,32 +48,28 @@ public class PoeOverlay : Overlay
     {
         get
         {
-            if (_targetProcess == null)
+            _overlayHasFocus = false;
+            if (_targetWindowHandle == IntPtr.Zero)
                 return false;
 
             IntPtr handle = ScreenHelper.GetForegroundWindow();
+            if (handle == _targetWindowHandle) return true;
 
             ScreenHelper.GetWindowThreadProcessId(
                 handle,
                 out var processId);
 
-            if (processId != _targetProcess.Id &&
-                processId != _selfProcess.Id)
-            {
-                return false;
-            }
-
-            return true;
+            _overlayHasFocus = processId == Environment.ProcessId;
+            return _overlayHasFocus || processId == _targetProcessId;
         }
     }
 
     protected override Task PostInitialized()
     {
         ScreenHelper.HideFromTaskbar(window.Handle);
-        _selfProcess = Process.GetCurrentProcess();
         RefreshTargetProcess();
 
-        FPSLimit = 30;
+        FPSLimit = 60;
         ConfigureChineseFont();
 
         _craftPanel.Initialize(relativePath =>
@@ -127,6 +125,10 @@ public class PoeOverlay : Overlay
         // Smoothstep eases both endpoints; reversing direction keeps the current opacity.
         float opacity = _fadeProgress * _fadeProgress * (3f - 2f * _fadeProgress);
         bool visible = canRender && _fadeProgress > 0f;
+        // The library pumps Win32 input once per frame. Keep typing responsive without
+        // rendering the hidden overlay at the same rate as the active editor.
+        int frameRate = visible ? (_overlayHasFocus ? 120 : 60) : 15;
+        if (FPSLimit != frameRate) FPSLimit = frameRate;
         if (_backdropVisible != visible)
         {
             // Run after Overlay's transparency initialization, on the render thread.
@@ -154,16 +156,35 @@ public class PoeOverlay : Overlay
 
     private void RefreshTargetProcess()
     {
-        if (_targetProcess != null && !_targetProcess.HasExited) return;
         long now = Stopwatch.GetTimestamp();
         if (now < _nextProcessSearch) return;
-        _nextProcessSearch = now + Stopwatch.Frequency;
+        _nextProcessSearch = now + Stopwatch.Frequency / 2;
+        if (_targetProcess != null && !_targetProcess.HasExited)
+        {
+            // Process.Refresh invalidates MainWindowHandle and triggers a window lookup.
+            // Poll here instead of repeating that lookup from every rendered frame.
+            _targetProcess.Refresh();
+            _targetWindowHandle = _targetProcess.MainWindowHandle;
+            return;
+        }
         _targetProcess?.Dispose();
         _targetProcess = null;
+        _targetWindowHandle = IntPtr.Zero;
+        _targetProcessId = 0;
         foreach (var process in Process.GetProcessesByName(TargetProcessName))
         {
-            if (_targetProcess == null && process.MainWindowHandle != IntPtr.Zero) _targetProcess = process;
-            else process.Dispose();
+            if (_targetProcess == null)
+            {
+                var handle = process.MainWindowHandle;
+                if (handle != IntPtr.Zero)
+                {
+                    _targetProcess = process;
+                    _targetWindowHandle = handle;
+                    _targetProcessId = process.Id;
+                    continue;
+                }
+            }
+            process.Dispose();
         }
     }
 
@@ -171,6 +192,7 @@ public class PoeOverlay : Overlay
     {
         if (_targetProcess == null || _targetProcess.HasExited)
             throw new InvalidOperationException("游戏尚未运行。");
+        _targetProcess.Refresh();
         IntPtr handle = _targetProcess.MainWindowHandle;
         if (!GameAutomation.TryGetBounds(handle, out var bounds))
             throw new InvalidOperationException("无法读取游戏客户区。");
@@ -197,18 +219,12 @@ public class PoeOverlay : Overlay
         {
             _craftRunner.Dispose();
             _targetProcess?.Dispose();
-            _selfProcess?.Dispose();
         }
     }
 
     public bool Resize()
     {
-        if (_targetProcess == null || _targetProcess.HasExited)
-            return false;
-
-        // Refresh the cached handle in case the game recreates its window.
-        _targetProcess.Refresh();
-        var handle = _targetProcess.MainWindowHandle;
+        var handle = _targetWindowHandle;
         if (handle == IntPtr.Zero || ScreenHelper.IsIconic(handle))
             return false;
 
