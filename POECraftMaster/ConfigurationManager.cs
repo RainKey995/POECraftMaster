@@ -1,9 +1,10 @@
 using System.Text.Json;
 using POECraftMaster.Crafting;
+using POECraftMaster.Singleton;
 
 namespace POECraftMaster;
 
-internal sealed class ConfigurationManager
+internal sealed class ConfigurationManager : Singleton<ConfigurationManager>
 {
     public static string DirectoryPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "POECraftMaster");
@@ -20,9 +21,8 @@ internal sealed class ConfigurationManager
     public string? AccountError { get; }
     public HotkeySettings Hotkey { get; private set; } = new();
     public string HotkeyError { get; }
-    public static ConfigurationManager Instance { get; } = new();
 
-    private ConfigurationManager()
+    public ConfigurationManager()
     {
         Profiles = new CraftProfileStore(ProfilesPath);
         Coordinates = Load(() => CoordinateConfigFile.Load(CoordinatesPath), out var coordinatesError);

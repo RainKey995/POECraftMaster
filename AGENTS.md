@@ -1,5 +1,15 @@
 # POECraftMaster
 
+## 单例
+
+- 所有的单例类都需要继承于 `Singleton<T>`，基类位于 `POECraftMaster/Singleton/Singleton.cs`。
+- 通过基类提供的 `Instance` 访问，调用方统一使用该属性获取实例。单例类型提供基类所需的无参构造函数。
+
+## POE API
+
+- 应用内所有 POE API 接口统一在 `POECraftMaster/PoeApiClient.cs` 中实现，通过 `PoeApiClient.Instance` 调用。
+- 后续接入角色、背包、市集等接口时，在该类中处理请求、认证和响应解析。界面和制作模块调用客户端方法。
+
 ## 应用配置
 
 - 应用入口在创建覆盖层和托盘前初始化 `ConfigurationManager.Instance`。配置目录统一为 `%LOCALAPPDATA%\POECraftMaster`。

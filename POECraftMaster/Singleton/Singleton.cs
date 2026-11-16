@@ -11,41 +11,48 @@ public interface ISingleton : IDisposable
 
 public abstract class Singleton<T> : ISingleton where T : Singleton<T>, new()
 {
-    private bool isDisposed;
-
-    private static T instance;
+    private static readonly object SyncRoot = new();
+    private static T? _instance;
+    private bool _isDisposed;
 
     public static T Instance
     {
-        get { return instance; }
+        get
+        {
+            lock (SyncRoot)
+                return _instance ??= new T();
+        }
     }
 
     void ISingleton.Register()
     {
-        if (instance != null)
+        lock (SyncRoot)
         {
-            throw new Exception($"singleton register twice! {typeof(T).Name}");
+            if (_isDisposed)
+                throw new ObjectDisposedException(typeof(T).Name);
+            if (_instance != null)
+                throw new InvalidOperationException($"Singleton already registered: {typeof(T).Name}");
+            _instance = (T)this;
         }
-
-        instance = (T)this;
     }
 
     void ISingleton.Destroy()
     {
-        if (this.isDisposed)
+        lock (SyncRoot)
         {
-            return;
+            if (_isDisposed)
+                return;
+            _isDisposed = true;
+            if (ReferenceEquals(_instance, this))
+                _instance = null;
         }
-
-        this.isDisposed = true;
-
-        instance.Dispose();
-        instance = null;
+        Dispose();
     }
 
     bool ISingleton.IsDisposed()
     {
-        return this.isDisposed;
+        lock (SyncRoot)
+            return _isDisposed;
     }
 
     public virtual void Dispose()
