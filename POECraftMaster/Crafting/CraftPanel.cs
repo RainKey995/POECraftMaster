@@ -62,6 +62,9 @@ internal sealed class CraftPanel
             if (settings != null && ImGui.BeginTabItem("设置"))
             {
                 settings.Render();
+                ImGui.Spacing();
+                ImGui.Separator();
+                DrawCoordinateConfig();
                 ImGui.EndTabItem();
             }
             else
@@ -201,13 +204,6 @@ internal sealed class CraftPanel
             });
             ImGui.TextWrapped("同名导入保留当前方案；保存当前方案可更新同名方案。坐标由独立配置管理。");
         }
-        if (ImGui.CollapsingHeader("坐标配置（百分比）"))
-        {
-            ImGui.TextWrapped($"配置文件：{CoordinateConfigFile.DefaultPath}");
-            ImGui.TextWrapped("坐标仅从配置文件读取。修改 JSON 后请重启应用，坐标单位为 0～100 的百分比。");
-            ImGui.TextWrapped("通货坐标相对于本次拖动框选的仓库区域；背包起点和步长相对于整个游戏客户区。");
-            ImGui.TextWrapped(_coordinates == null ? "坐标配置加载失败，无法开始制作。请检查配置文件后重启应用。" : "坐标配置已加载。");
-        }
         ImGui.Separator();
         ImGui.TextWrapped(progress.Message);
         ImGui.Text($"完成 {progress.Completed}/{progress.Total}，已执行 {progress.Attempts} 轮");
@@ -216,6 +212,17 @@ internal sealed class CraftPanel
             ImGui.TextWrapped(progress.ItemText);
         ImGui.EndChild();
         ImGui.EndTable();
+    }
+
+    private void DrawCoordinateConfig()
+    {
+        if (ImGui.CollapsingHeader("坐标配置（百分比）"))
+        {
+            ImGui.TextWrapped($"配置文件：{CoordinateConfigFile.DefaultPath}");
+            ImGui.TextWrapped("坐标仅从配置文件读取。修改 JSON 后请重启应用，坐标单位为 0～100 的百分比。");
+            ImGui.TextWrapped("通货坐标相对于本次拖动框选的仓库区域；背包起点和步长相对于整个游戏客户区。");
+            ImGui.TextWrapped(_coordinates == null ? "坐标配置加载失败，无法开始制作。请检查配置文件后重启应用。" : "坐标配置已加载。");
+        }
     }
 
     private CraftOptions Options() => WithEditor(_coordinates
