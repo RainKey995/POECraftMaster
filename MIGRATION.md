@@ -28,7 +28,7 @@
 
 工具用 `Ctrl + Alt + C` 读取游戏装备文本，仅在获取到新剪贴板内容且包含中文/英文装备稀有度头时继续。复制失败或超时会停止，不使用旧剪贴板内容。读取会改变当前剪贴板内容。已匹配的物品会在花费通货前跳过。
 
-词缀配置保存在 `%LOCALAPPDATA%/POECraftMaster/craft-profiles.json`，示例为 `examples/craft-profiles.json`。首次没有文件时方案列表为空，保存方案后创建文件；不自动导入其他项目的配置。
+词缀配置保存在 `Configs/craft-profiles.json`，示例为 `examples/craft-profiles.json`。首次没有文件时方案列表为空，保存方案后创建文件；不自动导入其他项目的配置。
 
 JSON 顶层是以方案名称为键的对象，每个方案包含：
 
@@ -51,7 +51,7 @@ JSON 顶层是以方案名称为键的对象，每个方案包含：
 - `schemaVersion`：当前为 `1`。以后变更格式时在 `CoordinateConfig` / `CoordinateConfigFile` 中集中处理。
 - `units`：固定为 `percent`，`x` / `y` 是 0～100 百分比。通货以每次框选的仓库区域为基准，背包以游戏客户区为基准。
 - `inventoryOrigin`：背包左上格中心；`inventoryStep`：相邻列/行的中心距离。
-- 启动时加载 `%LOCALAPPDATA%/POECraftMaster/coordinates.json`。缺失或无效时阻止制作，不使用默认坐标。
+- 启动时加载 `Configs/coordinates.json`。缺失或无效时阻止制作，不使用默认坐标。
 - 坐标需直接修改配置文件，重启后生效。界面仅显示路径和加载状态。
 - 支持 JSON 注释和尾随逗号；缺失字段、空坐标、不支持的版本、错误单位及背包越界会被拒绝。
 - 应用词缀方案不覆盖坐标。旧方案的坐标字段会被忽略，重新保存方案时不再写入。

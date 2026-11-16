@@ -29,3 +29,6 @@ Desktop.ini
 
 # Test Project
 tests/
+
+# Local application configuration
+/Configs/

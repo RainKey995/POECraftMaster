@@ -6,8 +6,18 @@ namespace POECraftMaster;
 
 internal sealed class ConfigurationManager : Singleton<ConfigurationManager>
 {
-    public static string DirectoryPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "POECraftMaster");
+    public static string DirectoryPath { get; } = Path.Combine(FindProjectRoot(), "Configs");
+
+    private static string FindProjectRoot()
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "POECraftMaster.sln")))
+                return directory.FullName;
+        }
+
+        return AppContext.BaseDirectory;
+    }
 
     public static string CoordinatesPath { get; } = Path.Combine(DirectoryPath, "coordinates.json");
     public static string ProfilesPath { get; } = Path.Combine(DirectoryPath, "craft-profiles.json");
