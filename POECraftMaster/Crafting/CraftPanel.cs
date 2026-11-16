@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Reflection;
 using ImGuiNET;
 using POECraftMaster.Tools;
 
@@ -6,6 +7,8 @@ namespace POECraftMaster.Crafting;
 
 internal sealed class CraftPanel(CraftProfileStore store)
 {
+    private static readonly string Title = $"POECraftMaster {typeof(CraftPanel).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}";
     private readonly CraftProfileStore _store = store;
     private readonly CalculatorPanel _calculator = new();
     private readonly bool[] _slots = new bool[60];
@@ -30,7 +33,7 @@ internal sealed class CraftPanel(CraftProfileStore store)
 
     public void Render(CraftRunner runner, Action<CraftOptions> start, OverlaySettingsPanel? settings)
     {
-        ImGui.Text("POE Craft Master");
+        ImGui.TextUnformatted(Title);
         ImGui.SameLine();
         ImGui.TextDisabled("功能栏");
         ImGui.Separator();
