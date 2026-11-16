@@ -31,4 +31,5 @@ Desktop.ini
 tests/
 
 # Local application configuration
-/Configs/
+/Configs/*
+!/Configs/coordinates.json

@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "units": "percent",
+  "inventoryOrigin": {
+    "x": 67.60,
+    "y": 56.85
+  },
+  "inventoryStep": {
+    "x": 2.73,
+    "y": 4.86
+  },
+  "scrollFragment": {
+    "x": 6.70,
+    "y": 11.99
+  },
+  "scrollofWisdom": {
+    "x": 15.75,
+    "y": 11.99
+  },
+  "portalScroll": {
+    "x": 24.68,
+    "y": 11.99
+  },
+  "orbofTransmutation": {
+    "x": 6.70,
+    "y": 22.68
+  },
+  "transmutationShard": {
+    "x": 6.70,
+    "y": 31.73
+  },
+  "orbofAlteration": {
+    "x": 15.75,
+    "y": 22.68
+  },
+  "alterationShard": {
+    "x": 15.75,
+    "y": 31.73
+  },
+  "orbofAnnulment": {
+    "x": 24.68,
+    "y": 22.68
+  },
+  "annulmentShard": {
+    "x": 24.68,
+    "y": 31.73
+  },
+  "orbofChance": {
+    "x": 33.61,
+    "y": 22.68
+  },
+  "orbofAugmentation": {
+    "x": 33.61,
+    "y": 31.73
+  },
+  "fracturingOrb": {
+    "x": 6.70,
+    "y": 42.42
+  },
+  "fracturingShard": {
+    "x": 6.70,
+    "y": 51.35
+  },
+  "jewellersOrb": {
+    "x": 15.75,
+    "y": 42.42
+  },
+  "ancientOrb": {
+    "x": 15.75,
+    "y": 51.35
+  },
+  "orbofFusing": {
+    "x": 24.68,
+    "y": 42.42
+  },
+  "orbofBinding": {
+    "x": 24.68,
+    "y": 51.35
+  },
+  "chromaticOrb": {
+    "x": 33.61,
+    "y": 42.42
+  },
+  "hinekorasLock": {
+    "x": 33.61,
+    "y": 51.35
+  },
+  "enkindlingOrb": {
+    "x": 45.36,
+    "y": 11.99
+  },
+  "instillingOrb": {
+    "x": 54.41,
+    "y": 11.99
+  },
+  "exaltedOrb": {
+    "x": 45.36,
+    "y": 22.68
+  },
+  "exaltedShard": {
+    "x": 45.36,
+    "y": 31.73
+  },
+  "mirrorofKalandra": {
+    "x": 54.41,
+    "y": 22.68
+  },
+  "mirrorShard": {
+    "x": 54.41,
+    "y": 31.73
+  },
+  "blacksmithsWhetstone": {
+    "x": 66.27,
+    "y": 11.99
+  },
+  "armourersScrap": {
+    "x": 75.32,
+    "y": 11.99
+  },
+  "glassblowersBauble": {
+    "x": 84.25,
+    "y": 11.99
+  },
+  "gemcuttersPrism": {
+    "x": 93.30,
+    "y": 11.99
+  },
+  "regalOrb": {
+    "x": 66.27,
+    "y": 22.68
+  },
+  "regalShard": {
+    "x": 66.27,
+    "y": 31.73
+  },
+  "orbofAlchemy": {
+    "x": 75.32,
+    "y": 22.68
+  },
+  "alchemyShard": {
+    "x": 75.32,
+    "y": 31.73
+  },
+  "chaosOrb": {
+    "x": 84.25,
+    "y": 22.68
+  },
+  "chaosShard": {
+    "x": 84.25,
+    "y": 31.73
+  },
+  "blessedOrb": {
+    "x": 93.30,
+    "y": 22.68
+  },
+  "divineOrb": {
+    "x": 93.30,
+    "y": 31.73
+  },
+  "orbofScouring": {
+    "x": 66.27,
+    "y": 42.42
+  },
+  "sacredOrb": {
+    "x": 75.32,
+    "y": 42.42
+  },
+  "divinationCards": {
+    "x": 84.25,
+    "y": 42.42
+  },
+  "vaalOrb": {
+    "x": 93.30,
+    "y": 42.42
+  },
+  "orbofRegret": {
+    "x": 66.27,
+    "y": 51.35
+  },
+  "orbofUnmaking": {
+    "x": 75.32,
+    "y": 51.35
+  },
+  "veiledExaltedOrb": {
+    "x": 84.25,
+    "y": 51.35
+  },
+  "veiledChaosOrb": {
+    "x": 93.30,
+    "y": 51.35
+  },
+  "equipSlot": {
+    "x": 50.18,
+    "y": 51.70
+  },
+  "defaultUIButton": {
+    "x": 23.03,
+    "y": 3.41
+  },
+  "otherWorldUIButton": {
+    "x": 49.82,
+    "y": 3.41
+  },
+  "seasonUIButton": {
+    "x": 76.62,
+    "y": 3.41
+  }
+}
