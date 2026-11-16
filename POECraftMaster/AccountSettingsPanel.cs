@@ -6,7 +6,8 @@ namespace POECraftMaster;
 internal sealed class AccountSettingsPanel
 {
     private readonly Func<bool, string, Task<string?>> _chooseFile;
-    private string _path = AccountConfig.DefaultPath;
+    private readonly ConfigurationManager _config = ConfigurationManager.Instance;
+    private string _path = ConfigurationManager.Instance.AccountPath;
     private string _accountName = "";
     private string _cookie = "";
     private string _status = "";
@@ -17,12 +18,9 @@ internal sealed class AccountSettingsPanel
     public AccountSettingsPanel(Func<bool, string, Task<string?>> chooseFile)
     {
         _chooseFile = chooseFile;
-        RunFileAction(() =>
-        {
-            if (!File.Exists(_path))
-                new AccountConfig().Save(_path, overwrite: false);
-            Load(_path);
-        });
+        SetAccount(_path, _config.DefaultAccount);
+        if (_config.AccountError != null)
+            _status = "无法读取或创建默认账号配置，请检查文件格式和权限。";
     }
 
     public bool FileDialogOpen => _fileDialog is { IsCompleted: false };
@@ -45,7 +43,8 @@ internal sealed class AccountSettingsPanel
             });
         }
 
-        ImGui.TextUnformatted("账号配置");
+        if (!ImGui.CollapsingHeader("账号配置"))
+            return;
         ImGui.TextWrapped(_path);
         if (ImGui.Button("选择配置文件"))
             OpenDialog(false);
@@ -70,9 +69,10 @@ internal sealed class AccountSettingsPanel
         _fileDialog = _chooseFile(saveAs, _path);
     }
 
-    private void Load(string path)
+    private void Load(string path) => SetAccount(path, _config.ReadAccount(path));
+
+    private void SetAccount(string path, AccountConfig? config)
     {
-        var config = AccountConfig.Load(path);
         _path = path;
         _hasConfig = config != null;
         _accountName = config?.AccountName ?? "";
@@ -82,7 +82,7 @@ internal sealed class AccountSettingsPanel
 
     private void Save(string path)
     {
-        new AccountConfig(_accountName, _cookie).Save(path);
+        _config.SaveAccount(path, new AccountConfig(_accountName, _cookie));
         _path = path;
         _hasConfig = true;
         _status = "账号配置已保存。";

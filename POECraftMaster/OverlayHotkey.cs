@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Windows.Forms;
 
 namespace POECraftMaster;
@@ -11,9 +10,7 @@ internal sealed record HotkeySettings(Keys Key = Keys.F10, bool Control = true,
 /// <summary>Owns a message-only window and its global shortcut on the tray UI thread.</summary>
 internal sealed class OverlayHotkey : NativeWindow, IDisposable
 {
-    private readonly string _settingsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "POECraftMaster", "hotkey.json");
+    private readonly ConfigurationManager _config = ConfigurationManager.Instance;
     private int _registeredId;
     public HotkeySettings Settings { get; private set; } = new();
     public string Status { get; private set; } = "";
@@ -22,16 +19,8 @@ internal sealed class OverlayHotkey : NativeWindow, IDisposable
     public OverlayHotkey()
     {
         CreateHandle(new CreateParams { Parent = new IntPtr(-3) }); // HWND_MESSAGE
-        try
-        {
-            if (File.Exists(_settingsPath))
-                Settings = JsonSerializer.Deserialize<HotkeySettings>(File.ReadAllText(_settingsPath))
-                    ?? new HotkeySettings();
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
-        {
-            Status = "无法读取快捷键配置，已使用默认值。";
-        }
+        Settings = _config.Hotkey;
+        Status = _config.HotkeyError;
 
         if (TryRegister(Settings, 1, out var error))
             _registeredId = 1;
@@ -54,10 +43,7 @@ internal sealed class OverlayHotkey : NativeWindow, IDisposable
 
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
-            var temporaryPath = _settingsPath + ".tmp";
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings));
-            File.Move(temporaryPath, _settingsPath, true);
+            _config.SaveHotkey(settings);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {

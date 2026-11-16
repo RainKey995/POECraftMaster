@@ -5,9 +5,7 @@ namespace POECraftMaster.Crafting;
 
 public sealed class CraftProfileStore
 {
-    public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "POECraftMaster", "craft-profiles.json");
+    public static string DefaultPath => ConfigurationManager.ProfilesPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

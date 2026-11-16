@@ -12,7 +12,9 @@ public class PoeOverlay : Overlay
 {
     public const string TargetProcessName = "PathOfExile_x64";
 
-    private readonly CraftPanel _craftPanel = new();
+    private readonly CraftProfileStore _profiles = ConfigurationManager.Instance.Profiles;
+    private readonly CoordinateSettingsPanel _coordinates = new();
+    private readonly CraftPanel _craftPanel;
     private readonly CraftRunner _craftRunner = new();
     private OverlaySettingsPanel? _settingsPanel;
     private bool _nativeSuppressed;
@@ -45,7 +47,11 @@ public class PoeOverlay : Overlay
 
     public CraftProgress CraftProgress => _craftRunner.Progress;
     public void StopCrafting() => _craftRunner.Stop();
-    internal void ConfigureSettings(OverlaySettingsPanel panel) => _settingsPanel = panel;
+    public PoeOverlay() => _craftPanel = new CraftPanel(_profiles);
+
+    internal void ConfigureSettings(HotkeySettings initial, string status,
+        Func<HotkeySettings, Task<string>> save, Func<bool, string, Task<string?>> chooseFile)
+        => _settingsPanel = new OverlaySettingsPanel(initial, status, save, chooseFile, _profiles, _coordinates);
 
     public bool IsRender
     {
@@ -195,6 +201,10 @@ public class PoeOverlay : Overlay
 
     private void StartCrafting(CraftOptions options)
     {
+        options = _coordinates.ApplyTo(options);
+        if (options.Validate() is { } error)
+            throw new ArgumentException(error);
+
         if (_targetProcess == null || _targetProcess.HasExited)
             throw new InvalidOperationException("游戏尚未运行。");
         _targetProcess.Refresh();

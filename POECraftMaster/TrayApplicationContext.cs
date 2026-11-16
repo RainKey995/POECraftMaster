@@ -21,7 +21,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _hotkey = new OverlayHotkey();
         _hotkey.Pressed += _overlay.ToggleVisibility;
         _ = _dispatcher.Handle;
-        _overlay.ConfigureSettings(new OverlaySettingsPanel(_hotkey.Settings, _hotkey.Status, SaveHotkey, ChooseAccountFile));
+        _overlay.ConfigureSettings(_hotkey.Settings, _hotkey.Status, SaveHotkey, ChooseAccountFile);
         _icon = new Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "poe.ico"));
         _menu = new ContextMenuStrip();
         _stopCrafting = new ToolStripMenuItem("停止制作", null, (_, _) => _overlay.StopCrafting());

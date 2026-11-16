@@ -4,10 +4,6 @@ namespace POECraftMaster;
 
 internal sealed record AccountConfig(string AccountName = "", string Cookie = "")
 {
-    public static string DefaultPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "POECraftMaster", "account.json");
-
     public static AccountConfig? Load(string path)
     {
         string contents = File.ReadAllText(path);

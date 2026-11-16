@@ -199,9 +199,7 @@ public sealed record CoordinateConfig
 
 public static class CoordinateConfigFile
 {
-    public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "POECraftMaster", "coordinates.json");
+    public static string DefaultPath => ConfigurationManager.CoordinatesPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
