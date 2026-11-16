@@ -157,6 +157,22 @@ internal sealed class CraftPanel
         ImGui.TableNextColumn();
         // With a single-column table this starts the next row; keep it scrollable on small windows.
         ImGui.BeginChild("craft profiles", new Vector2(0, columns ? 0 : 500));
+        if (_mode == CraftMode.Alteration)
+        {
+            DrawAffixProfiles();
+            ImGui.Separator();
+        }
+        ImGui.TextWrapped(progress.Message);
+        ImGui.Text($"完成 {progress.Completed}/{progress.Total}，已执行 {progress.Attempts} 轮");
+        ImGui.TextWrapped(_message);
+        if (!string.IsNullOrEmpty(progress.ItemText) && ImGui.CollapsingHeader("最近读取的装备"))
+            ImGui.TextWrapped(progress.ItemText);
+        ImGui.EndChild();
+        ImGui.EndTable();
+    }
+
+    private void DrawAffixProfiles()
+    {
         ImGui.Text("词缀方案");
         ImGui.InputText("筛选", ref _filter, 128);
         if (ImGui.BeginCombo("方案", _selectedProfile))
@@ -189,19 +205,11 @@ internal sealed class CraftPanel
             _selectedProfile = _name.Trim();
             _message = "方案已保存（同名方案更新）。";
         });
-        ImGui.Separator();
-        ImGui.TextWrapped(progress.Message);
-        ImGui.Text($"完成 {progress.Completed}/{progress.Total}，已执行 {progress.Attempts} 轮");
-        ImGui.TextWrapped(_message);
-        if (!string.IsNullOrEmpty(progress.ItemText) && ImGui.CollapsingHeader("最近读取的装备"))
-            ImGui.TextWrapped(progress.ItemText);
-        ImGui.EndChild();
-        ImGui.EndTable();
     }
 
     private void DrawAffixJsonConfig()
     {
-        if (ImGui.CollapsingHeader("词缀 JSON 配置"))
+        if (ImGui.CollapsingHeader("词缀 JSON 配置（改造 + 增幅）"))
         {
             ImGui.TextWrapped($"本项目配置：{_store.FilePath}");
             ImGui.InputText("JSON 路径", ref _profilePath, 2048);
