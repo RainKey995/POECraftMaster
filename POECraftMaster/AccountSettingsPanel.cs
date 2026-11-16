@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Net.Http;
 using ImGuiNET;
 
 namespace POECraftMaster;
@@ -14,6 +15,9 @@ internal sealed class AccountSettingsPanel
     private bool _hasConfig;
     private bool _saveAs;
     private Task<string?>? _fileDialog;
+    private Task<IReadOnlyList<PoeCharacter>>? _characterRequest;
+    private IReadOnlyList<PoeCharacter> _characters = [];
+    private string? _selectedCharacter;
 
     public AccountSettingsPanel(Func<bool, string, Task<string?>> chooseFile)
     {
@@ -58,6 +62,7 @@ internal sealed class AccountSettingsPanel
             ImGui.InputText("Cookie", ref _cookie, 65536, ImGuiInputTextFlags.Password);
             if (ImGui.Button("保存账号配置"))
                 RunFileAction(() => Save(_path));
+            RenderCharacters();
         }
         if (_status.Length > 0)
             ImGui.TextWrapped(_status);
@@ -78,14 +83,64 @@ internal sealed class AccountSettingsPanel
         _accountName = config?.AccountName ?? "";
         _cookie = config?.Cookie ?? "";
         _status = _hasConfig ? "" : "配置文件为空，可通过「另存为」创建账号配置。";
+        _selectedCharacter = null;
+        RefreshCharacters(config);
     }
 
     private void Save(string path)
     {
-        _config.SaveAccount(path, new AccountConfig(_accountName, _cookie));
+        var account = new AccountConfig(_accountName, _cookie);
+        _config.SaveAccount(path, account);
         _path = path;
         _hasConfig = true;
         _status = "账号配置已保存。";
+        RefreshCharacters(account);
+    }
+
+    private void RefreshCharacters(AccountConfig? account)
+    {
+        _characters = [];
+        _characterRequest = account != null && !string.IsNullOrWhiteSpace(account.AccountName)
+            && !string.IsNullOrWhiteSpace(account.Cookie)
+            ? FetchCharactersAsync(account) : null;
+    }
+
+    private static async Task<IReadOnlyList<PoeCharacter>> FetchCharactersAsync(AccountConfig account)
+    {
+        try
+        {
+            var characters = await PoeApiClient.Instance.GetCharactersAsync(account).ConfigureAwait(false);
+            return characters.Where(character => character != null && !string.IsNullOrWhiteSpace(character.Name)).ToArray();
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException
+            or InvalidDataException or OperationCanceledException or ArgumentException)
+        {
+            return [];
+        }
+    }
+
+    private void RenderCharacters()
+    {
+        if (_characterRequest is { IsCompleted: true })
+        {
+            _characters = _characterRequest.GetAwaiter().GetResult();
+            _characterRequest = null;
+            if (!_characters.Any(character => character.Name == _selectedCharacter))
+                _selectedCharacter = null;
+        }
+
+        if (_characters.Count == 0 || !ImGui.BeginCombo("角色", _selectedCharacter ?? "请选择角色"))
+            return;
+
+        foreach (var character in _characters)
+        {
+            bool selected = character.Name == _selectedCharacter;
+            if (ImGui.Selectable(character.Name, selected))
+                _selectedCharacter = character.Name;
+            if (selected)
+                ImGui.SetItemDefaultFocus();
+        }
+        ImGui.EndCombo();
     }
 
     private void RunFileAction(Action action)
