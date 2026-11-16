@@ -6,7 +6,7 @@ namespace POECraftMaster;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
         using var overlay = new PoeOverlay();

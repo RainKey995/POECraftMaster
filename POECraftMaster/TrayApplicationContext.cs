@@ -11,7 +11,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly NotifyIcon _trayIcon;
     private readonly System.Windows.Forms.Timer _timer;
     private readonly Task _overlayTask;
-    private SettingsForm? _settingsForm;
+    private readonly Control _dispatcher = new();
     private readonly OverlayHotkey _hotkey;
     private readonly ToolStripMenuItem _stopCrafting;
 
@@ -19,14 +19,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _overlay = overlay;
         _hotkey = new OverlayHotkey();
-        _hotkey.Pressed += () =>
-        {
-            if (_settingsForm == null || !_settingsForm.ContainsFocus)
-                _overlay.ToggleVisibility();
-        };
+        _hotkey.Pressed += _overlay.ToggleVisibility;
+        _ = _dispatcher.Handle;
+        _overlay.ConfigureSettings(new OverlaySettingsPanel(_hotkey.Settings, _hotkey.Status, SaveHotkey, ChooseAccountFile));
         _icon = new Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "poe.ico"));
         _menu = new ContextMenuStrip();
-        _menu.Items.Add("设置", null, (_, _) => ShowSettings());
         _stopCrafting = new ToolStripMenuItem("停止制作", null, (_, _) => _overlay.StopCrafting());
         _stopCrafting.Enabled = false;
         _menu.Items.Add(_stopCrafting);
@@ -45,20 +42,35 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _timer.Start();
     }
 
-    private void ShowSettings()
-    {
-        _overlay.StopCrafting();
-        _overlay.SetSettingsOpen(true);
-        if (_settingsForm == null || _settingsForm.IsDisposed)
-        {
-            _settingsForm = new SettingsForm(_hotkey) { Icon = _icon };
-            _settingsForm.FormClosed += (_, _) => _overlay.SetSettingsOpen(false);
-            _settingsForm.Show();
-        }
+    private Task<string> SaveHotkey(HotkeySettings settings)
+        => RunOnTrayThread(() => _hotkey.TryApply(settings, out var error) ? "快捷键已保存并生效。" : error);
 
-        if (_settingsForm.WindowState == FormWindowState.Minimized)
-            _settingsForm.WindowState = FormWindowState.Normal;
-        _settingsForm.Activate();
+    private Task<string?> ChooseAccountFile(bool save, string path)
+        => RunOnTrayThread<string?>(() =>
+        {
+            using FileDialog dialog = save ? new SaveFileDialog() : new OpenFileDialog();
+            dialog.Filter = "JSON 配置文件 (*.json)|*.json";
+            dialog.DefaultExt = "json";
+            dialog.InitialDirectory = Path.GetDirectoryName(path);
+            dialog.FileName = Path.GetFileName(path);
+            return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : null;
+        });
+
+    private Task<T> RunOnTrayThread<T>(Func<T> action)
+    {
+        var result = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                result.SetResult(action());
+            }
+            catch (Exception exception)
+            {
+                result.SetException(exception);
+            }
+        });
+        return result.Task;
     }
 
     private void CheckOverlay(object? sender, EventArgs e)
@@ -86,7 +98,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _timer.Stop();
         _trayIcon.Visible = false;
-        _settingsForm?.Close();
         _overlay.Close();
         base.ExitThreadCore();
     }
@@ -95,7 +106,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         if (disposing)
         {
-            _settingsForm?.Dispose();
+            _dispatcher.Dispose();
             _hotkey.Dispose();
             _timer.Dispose();
             _trayIcon.Dispose();

@@ -34,7 +34,7 @@ internal sealed class CraftPanel
         });
     }
 
-    public void Render(CraftRunner runner, Action<CraftOptions> start)
+    public void Render(CraftRunner runner, Action<CraftOptions> start, OverlaySettingsPanel? settings)
     {
         ImGui.Text("POE Craft Master");
         ImGui.SameLine();
@@ -59,6 +59,13 @@ internal sealed class CraftPanel
                 _calculator.Render();
                 ImGui.EndTabItem();
             }
+            if (settings != null && ImGui.BeginTabItem("设置"))
+            {
+                settings.Render();
+                ImGui.EndTabItem();
+            }
+            else
+                settings?.CancelRecording();
             ImGui.EndTabBar();
         }
     }

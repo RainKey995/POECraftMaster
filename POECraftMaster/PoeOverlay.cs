@@ -14,7 +14,7 @@ public class PoeOverlay : Overlay
 
     private readonly CraftPanel _craftPanel = new();
     private readonly CraftRunner _craftRunner = new();
-    private volatile bool _settingsOpen;
+    private OverlaySettingsPanel? _settingsPanel;
     private bool _nativeSuppressed;
     private long _nextProcessSearch;
 
@@ -32,6 +32,9 @@ public class PoeOverlay : Overlay
 
     public void ToggleVisibility()
     {
+        if (_settingsPanel?.IsRecording == true)
+            return;
+
         if (_craftRunner.Progress.Running)
         {
             _craftRunner.Stop();
@@ -42,7 +45,7 @@ public class PoeOverlay : Overlay
 
     public CraftProgress CraftProgress => _craftRunner.Progress;
     public void StopCrafting() => _craftRunner.Stop();
-    public void SetSettingsOpen(bool open) => _settingsOpen = open;
+    internal void ConfigureSettings(OverlaySettingsPanel panel) => _settingsPanel = panel;
 
     public bool IsRender
     {
@@ -103,10 +106,10 @@ public class PoeOverlay : Overlay
     protected override void Render()
     {
         RefreshTargetProcess();
-        bool suppress = _craftRunner.Progress.Running || _settingsOpen;
+        bool suppress = _craftRunner.Progress.Running || _settingsPanel?.FileDialogOpen == true;
         if (_nativeSuppressed != suppress)
         {
-            // A hidden native window cannot intercept the automated clicks or obscure Settings.
+            // A hidden native window cannot intercept automated clicks.
             ScreenHelper.ShowWindow(window.Handle, suppress ? 0 : 8); // HIDE / SHOWNA
             _nativeSuppressed = suppress;
         }
@@ -116,6 +119,8 @@ public class PoeOverlay : Overlay
 
         // Never leave a fading overlay on the desktop or over a minimized game.
         bool canRender = !suppress && IsRender && Resize();
+        if (!canRender || !_overlayHasFocus)
+            _settingsPanel?.CancelRecording();
         if (!canRender)
             _fadeProgress = 0f;
         else
@@ -148,7 +153,7 @@ public class PoeOverlay : Overlay
             | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse
             | (_overlayVisible ? ImGuiWindowFlags.None : ImGuiWindowFlags.NoInputs));
 
-        _craftPanel.Render(_craftRunner, StartCrafting);
+        _craftPanel.Render(_craftRunner, StartCrafting, _settingsPanel);
 
         ImGui.End();
         ImGui.PopStyleVar(3);
