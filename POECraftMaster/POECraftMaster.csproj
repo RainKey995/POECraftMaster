@@ -14,7 +14,6 @@
       <PackageReference Include="ClickableTransparentOverlay" Version="11.1.0" />
       <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
       <PackageReference Include="SDL3-CS" Version="3.4.14.1" />
-      <PackageReference Include="SixLabors.ImageSharp" Version="4.1.1" />
       <PackageReference Include="Veldrid.ImGui" Version="5.89.2-ga121087cad" />
       <PackageReference Include="Vortice.Mathematics" Version="2.1.1" />
     </ItemGroup>
