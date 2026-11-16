@@ -14,6 +14,7 @@ internal sealed class CraftPanel
     private string _filter = "";
     private string _selectedProfile = "";
     private string _message = "";
+    private string _profileJsonStatus = "";
     private string _profilePath = CraftProfileStore.DefaultPath;
     private CraftMode _mode;
     private int _matches = 1, _interval = 100, _attempts = 1000;
@@ -65,6 +66,7 @@ internal sealed class CraftPanel
                 ImGui.Spacing();
                 ImGui.Separator();
                 DrawCoordinateConfig();
+                DrawAffixJsonConfig();
                 ImGui.EndTabItem();
             }
             else
@@ -187,23 +189,6 @@ internal sealed class CraftPanel
             _selectedProfile = _name.Trim();
             _message = "方案已保存（同名方案更新）。";
         });
-        if (ImGui.CollapsingHeader("词缀 JSON 配置"))
-        {
-            ImGui.TextWrapped($"本项目配置：{_store.FilePath}");
-            ImGui.InputText("JSON 路径", ref _profilePath, 2048);
-            if (ImGui.Button("导入词缀 JSON")) RunUiAction(() =>
-            {
-                _store.ImportJson(_profilePath);
-                _message = _store.Status;
-            });
-            ImGui.SameLine();
-            if (ImGui.Button("导出词缀 JSON")) RunUiAction(() =>
-            {
-                _store.ExportJson(_profilePath);
-                _message = _store.Status;
-            });
-            ImGui.TextWrapped("同名导入保留当前方案；保存当前方案可更新同名方案。坐标由独立配置管理。");
-        }
         ImGui.Separator();
         ImGui.TextWrapped(progress.Message);
         ImGui.Text($"完成 {progress.Completed}/{progress.Total}，已执行 {progress.Attempts} 轮");
@@ -212,6 +197,29 @@ internal sealed class CraftPanel
             ImGui.TextWrapped(progress.ItemText);
         ImGui.EndChild();
         ImGui.EndTable();
+    }
+
+    private void DrawAffixJsonConfig()
+    {
+        if (ImGui.CollapsingHeader("词缀 JSON 配置"))
+        {
+            ImGui.TextWrapped($"本项目配置：{_store.FilePath}");
+            ImGui.InputText("JSON 路径", ref _profilePath, 2048);
+            if (ImGui.Button("导入词缀 JSON")) RunUiAction(() =>
+            {
+                _store.ImportJson(_profilePath);
+                _profileJsonStatus = _store.Status;
+            }, error => _profileJsonStatus = error);
+            ImGui.SameLine();
+            if (ImGui.Button("导出词缀 JSON")) RunUiAction(() =>
+            {
+                _store.ExportJson(_profilePath);
+                _profileJsonStatus = _store.Status;
+            }, error => _profileJsonStatus = error);
+            ImGui.TextWrapped("同名导入保留当前方案；保存当前方案可更新同名方案。坐标由独立配置管理。");
+            if (_profileJsonStatus.Length > 0)
+                ImGui.TextWrapped(_profileJsonStatus);
+        }
     }
 
     private void DrawCoordinateConfig()
@@ -254,13 +262,16 @@ internal sealed class CraftPanel
         _message = "方案已应用。";
     }
 
-    private void RunUiAction(Action action)
+    private void RunUiAction(Action action, Action<string>? reportError = null)
     {
         try { action(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException
             or InvalidOperationException or System.Text.Json.JsonException
             or NotSupportedException)
-        { _message = e.Message; }
+        {
+            if (reportError == null) _message = e.Message;
+            else reportError(e.Message);
+        }
     }
 
 }
