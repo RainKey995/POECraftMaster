@@ -15,8 +15,9 @@ internal sealed class ConfigurationManager : Singleton<ConfigurationManager>
     public string AccountPath { get; } = Path.Combine(DirectoryPath, "account.json");
     private string HotkeyPath { get; } = Path.Combine(DirectoryPath, "hotkey.json");
     public CraftProfileStore Profiles { get; }
-    public CoordinateConfig? Coordinates { get; }
-    public string? CoordinatesError { get; }
+    public string ActiveCoordinatesPath { get; private set; } = CoordinatesPath;
+    public CoordinateConfig? Coordinates { get; private set; }
+    public string? CoordinatesError { get; private set; }
     public AccountConfig? DefaultAccount { get; }
     public string? AccountError { get; }
     public HotkeySettings Hotkey { get; private set; } = new();
@@ -41,6 +42,20 @@ internal sealed class ConfigurationManager : Singleton<ConfigurationManager>
     }
 
     public AccountConfig? ReadAccount(string path) => AccountConfig.Load(path);
+
+    public void SelectCoordinates(string path)
+    {
+        Coordinates = CoordinateConfigFile.Load(path);
+        ActiveCoordinatesPath = path;
+        CoordinatesError = null;
+    }
+
+    public void SaveCoordinatesAs(string path)
+    {
+        CoordinateConfigFile.Save(path, Coordinates
+            ?? throw new InvalidOperationException("请先选择有效的坐标配置。"));
+        ActiveCoordinatesPath = path;
+    }
 
     public void SaveAccount(string path, AccountConfig account) => account.Save(path);
 

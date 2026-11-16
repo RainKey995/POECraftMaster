@@ -5,14 +5,14 @@ namespace POECraftMaster;
 
 internal sealed class OverlaySettingsPanel(
     HotkeySettings initial, string initialStatus, Func<HotkeySettings, Task<string>> save,
-    Func<bool, string, Task<string?>> chooseFile, CraftProfileStore store,
-    CoordinateSettingsPanel coordinates)
+    Func<bool, string, Task<string?>> chooseFile, CraftProfileStore store)
 {
     private readonly HotkeySettingsPanel _hotkey = new(initial, initialStatus, save);
     private readonly AccountSettingsPanel _account = new(chooseFile);
-    private readonly AffixJsonSettingsPanel _affixes = new(store);
+    private readonly CoordinateSettingsPanel _coordinates = new(chooseFile);
+    private readonly AffixJsonSettingsPanel _affixes = new(store, chooseFile);
 
-    public bool FileDialogOpen => _account.FileDialogOpen;
+    public bool FileDialogOpen => _account.FileDialogOpen || _coordinates.FileDialogOpen || _affixes.FileDialogOpen;
     public bool IsRecording => _hotkey.IsRecording;
 
     public void CancelRecording() => _hotkey.CancelRecording();
@@ -23,7 +23,7 @@ internal sealed class OverlaySettingsPanel(
         ImGui.Separator();
         _account.Render();
         ImGui.Separator();
-        coordinates.Render();
+        _coordinates.Render();
         ImGui.Separator();
         _affixes.Render();
     }

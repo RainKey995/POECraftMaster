@@ -17,7 +17,7 @@ public sealed class CraftProfileStore
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public string FilePath { get; }
+    public string FilePath { get; private set; }
     public Dictionary<string, CraftOptions> Profiles { get; private set; } = new(StringComparer.Ordinal);
     public string Status { get; private set; } = "";
 
@@ -65,6 +65,22 @@ public sealed class CraftProfileStore
     {
         WriteProfiles(path, Profiles);
         Status = $"词缀方案已导出：{Path.GetFullPath(path)}";
+    }
+
+    public void SelectFile(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        Profiles = ReadProfiles(fullPath);
+        FilePath = fullPath;
+        Status = "词缀方案已加载。";
+    }
+
+    public void SaveAs(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        WriteProfiles(fullPath, Profiles);
+        FilePath = fullPath;
+        Status = "词缀方案已另存并切换。";
     }
 
     private static Dictionary<string, CraftOptions> ReadProfiles(string path)

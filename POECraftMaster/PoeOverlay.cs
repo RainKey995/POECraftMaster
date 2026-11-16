@@ -13,7 +13,6 @@ public class PoeOverlay : Overlay
     public const string TargetProcessName = "PathOfExile_x64";
 
     private readonly CraftProfileStore _profiles = ConfigurationManager.Instance.Profiles;
-    private readonly CoordinateSettingsPanel _coordinates = new();
     private readonly CraftPanel _craftPanel;
     private readonly CraftRunner _craftRunner = new();
     private OverlaySettingsPanel? _settingsPanel;
@@ -51,7 +50,7 @@ public class PoeOverlay : Overlay
 
     internal void ConfigureSettings(HotkeySettings initial, string status,
         Func<HotkeySettings, Task<string>> save, Func<bool, string, Task<string?>> chooseFile)
-        => _settingsPanel = new OverlaySettingsPanel(initial, status, save, chooseFile, _profiles, _coordinates);
+        => _settingsPanel = new OverlaySettingsPanel(initial, status, save, chooseFile, _profiles);
 
     public bool IsRender
     {
@@ -201,7 +200,9 @@ public class PoeOverlay : Overlay
 
     private void StartCrafting(CraftOptions options)
     {
-        options = _coordinates.ApplyTo(options);
+        var coordinates = ConfigurationManager.Instance.Coordinates
+            ?? throw new InvalidOperationException("坐标配置未加载，请在设置中选择有效的配置文件。");
+        options = coordinates.ApplyTo(options);
         if (options.Validate() is { } error)
             throw new ArgumentException(error);
 

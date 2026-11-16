@@ -159,6 +159,8 @@ internal sealed class CraftPanel(CraftProfileStore store)
 
     private void DrawAffixProfiles()
     {
+        if (!_store.Profiles.ContainsKey(_selectedProfile))
+            _selectedProfile = "";
         ImGui.Text("词缀方案");
         ImGui.InputText("筛选", ref _filter, 128);
         if (ImGui.BeginCombo("方案", _selectedProfile))
